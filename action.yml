@@ -1,0 +1,26 @@
+name: 'RH DVCS PR Checker'
+description: 'Checks that PR is valid for DVCS bot'
+inputs:
+  github_token: 
+     description: "A github token to create the comment in the PR with"
+     required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Install Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache-dependency-path: |
+          requirements.txt
+    
+    - name: Install requirements.txt
+      run: pip install -r /home/runner/work/_actions/ansible/dvcs-action/v1/requirements.txt
+      shell: bash
+
+    - name: Validate PR for DVCS
+      env:
+        PULL_REQUEST: ${{ toJSON(github.event.pull_request) }}
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: /home/runner/work/_actions/ansible/dvcs-action/v1/check_dvcs.py
+      shell: bash
