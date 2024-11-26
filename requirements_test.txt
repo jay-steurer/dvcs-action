@@ -1,0 +1,9 @@
+requests_mock
+pytest
+black
+flake8
+isort
+Flake8-pyproject
+pytest-xdist
+pytest-cov
+tox

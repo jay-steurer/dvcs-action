@@ -10,8 +10,6 @@ jobs:
     permissions:
       packages: write
       contents: read
-    strategy:
-      fail-fast: false
     steps:
       - uses: actions/checkout@v2
 
@@ -25,3 +23,31 @@ jobs:
 
       - name: Run 311 check
         run: tox -e 311
+
+      - name: Inject PR number into coverage.xml
+        if: matrix.tests.sonar
+        run: sed -i '2i <!-- PR ${{ github.event.number }} -->' coverage.xml
+
+      - name: Upload coverage as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+
+      - name: SonarCloud Scan (on push)
+        uses: SonarSource/sonarcloud-github-action@master
+        if: github.event_name == 'push' && github.repository == 'ansible/dvcs-action'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Upload jUnit XML test results
+        if: github.event_name == 'push' && github.repository == 'ansible/dvcs-action' && github.ref_name == 'devel'
+        continue-on-error: true
+        run: >-
+          curl -v --user "${{ vars.PDE_ORG_RESULTS_AGGREGATOR_UPLOAD_USER }}:${{ secrets.PDE_ORG_RESULTS_UPLOAD_PASSWORD }}"
+          --form "xunit_xml=@dvcs-action-test-results.xml"
+          --form "component_name=dvcs-action"
+          --form "git_commit_sha=${{ github.sha }}"
+          --form "git_repository_url=https://github.com/${{ github.repository }}"
+          "${{ vars.PDE_ORG_RESULTS_AGGREGATOR_UPLOAD_URL }}/api/results/upload/"
