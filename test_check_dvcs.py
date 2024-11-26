@@ -19,7 +19,6 @@ class TestDoesStringStartWithJira:
             (f'{check_dvcs._NO_JIRA_MARKER} other stuff', check_dvcs._NO_JIRA_MARKER),
             (f'AAP-1234 other stuff', 'AAP-1234'),
         ],
-
     )
 
     def test_does_string_start_with_jira_function(self, input, expected_return):
@@ -203,9 +202,18 @@ class TestMain:
                         check_dvcs.main()
                     assert e.value.code == 255
 
-# class TestMakeDecisions():
+class TestMakeDecisions():
 
-#     @pytest.mark.parametrize(
-
-
-#     )
+    @pytest.mark.parametrize(
+        "pr_title_jira,possible_commit_jiras,source_branch_jira,expected_return",
+        [
+            (f'{check_dvcs._NO_JIRA_MARKER}', f'{check_dvcs._NO_JIRA_MARKER}',
+                f'{check_dvcs._NO_JIRA_MARKER}',
+                f'{check_dvcs.bad_icon} Title: PR title does not start with a JIRA number (AAP-[0-9]+) or {check_dvcs._NO_JIRA_MARKER}'),
+            # ("AAP-1234", "testing", "testing", "AAP-1234"),
+            # ("AAP-1234", "AAP-1234 AAP-5432", "AAP-1234", check_dvcs.good_icon),
+        ]
+    )
+    def test_make_decisions(self, pr_title_jira, possible_commit_jiras, source_branch_jira, expected_return):
+            result = check_dvcs.make_decisions( pr_title_jira, possible_commit_jiras, source_branch_jira)
+            assert result == expected_return
