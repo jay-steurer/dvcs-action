@@ -146,12 +146,9 @@ def make_decisions(
 def main():
     # Get and validate the data from the environment (the GitHub action should pass this in)
     try:
-        pull_request = json.loads(getenv("PULL_REQUEST"))
+        pull_request = json.loads(getenv("PULL_REQUEST", {}))
     except json.JSONDecodeError as jde:
         print(f"Failed to load json from string: {jde}")
-        exit(255)
-    except TypeError:
-        print("The PR string came back as None")
         exit(255)
 
     GITHUB_TOKEN = getenv("GH_TOKEN")
