@@ -44,7 +44,7 @@ def delete_previous_comments(comments_urls: list[str]) -> None:
         print(response.status_code)
         if response.status_code not in [204, 404]:
             comments_that_failed_to_delete.append(url)
-    
+
     if len(comments_that_failed_to_delete) > 0:
         raise CommandException('\n'.join(comments_that_failed_to_delete))
 
@@ -80,64 +80,52 @@ def make_decisions(
     possible_commit_jiras: list[str],
     source_branch_jira: Optional[str],
 ) -> str:
+    # Lower case everything for comparison
+    if pr_title_jira is not None:
+        pr_title_jira = pr_title_jira.lower()
+    if source_branch_jira is not None:
+        source_branch_jira = source_branch_jira.lower()
+    for index in range(0, len(possible_commit_jiras)):
+        if possible_commit_jiras[index] is not None:
+            possible_commit_jiras[index] = possible_commit_jiras[index].lower()
+
     decisions = [comment_preamble]
     # Now make th decisions if this is in good order....
     if not pr_title_jira:
         # If there is no PR title JIRA report bad
-        decisions.append(
-            f"* {bad_icon} Title: PR title does not start with a JIRA number (AAP-[0-9]+) or {_NO_JIRA_MARKER}"
-        )
+        decisions.append(f"* {bad_icon} Title: PR title does not start with a JIRA number (AAP-[0-9]+) or {_NO_JIRA_MARKER}")
     else:
         # Report the title is good
         decisions.append(f"* {good_icon} Title: JIRA number {pr_title_jira}")
 
     if not source_branch_jira:
         # If there is no Source Branch JIRA report bad
-        decisions.append(
-            f"* {bad_icon} Source Branch: The source branch of the PR does not start with a JIRA number (AAP-[0-9]+) or {_NO_JIRA_MARKER}"
-        )
+        decisions.append(f"* {bad_icon} Source Branch: The source branch of the PR does not start with a JIRA number (AAP-[0-9]+) or {_NO_JIRA_MARKER}")
     else:
         # Report the source branch is good
-        decisions.append(
-            f"* {good_icon} Source Branch: JIRA number {source_branch_jira}"
-        )
+        decisions.append(f"* {good_icon} Source Branch: JIRA number {source_branch_jira}")
 
     if pr_title_jira is not None and source_branch_jira is not None and pr_title_jira != source_branch_jira:
         # If we have source and title JIRAS and there is a mismatch between the title and source branch JIRAs report the mismatch
-        decisions.append(
-            f"* {bad_icon} Mismatch: The JIRAs in the source branch and title do not match!"
-        )
+        decisions.append(f"* {bad_icon} Mismatch: The JIRAs in the source branch {source_branch_jira} and title {pr_title_jira} do not match!")
 
     if len(possible_commit_jiras) == 0:
         # If we got no commit JIRAS the commits are bad
-        decisions.append(
-            f"* {bad_icon} Commits: No commits with a JIRA number (AAP-[0-9]+) or {_NO_JIRA_MARKER} found!"
-        )
+        decisions.append(f"* {bad_icon} Commits: No commits with a JIRA number (AAP-[0-9]+) or {_NO_JIRA_MARKER} found!")
     elif source_branch_jira == pr_title_jira:
         if source_branch_jira is None:
             # If the source branch JIRA and the title JIRA are missing and we have commit JIRAS report the commits as good
-            decisions.append(
-                f"* {good_icon} Commits: At least one JIRA number in commit messages {', '.join(possible_commit_jiras)}"
-            )
+            decisions.append(f"* {good_icon} Commits: At least one JIRA number in commit messages {', '.join(possible_commit_jiras)}")
         else:
             # If the source branch JIRA matches the title JIRA and we have that JIRA in the commits, the commits are good
             if source_branch_jira in possible_commit_jiras:
-                decisions.append(
-                    f"* {good_icon} Commits: At least one JIRA number in commit messages match the other JIRA numbers"
-                )
+                decisions.append(f"* {good_icon} Commits: At least one JIRA number in commit messages match the other JIRA numbers")
     else:
         # If we made it here, we have commit JIRAS but we have a mismatch between the source branch and title
-        if (
-            source_branch_jira is not None
-            and source_branch_jira not in possible_commit_jiras
-        ):
-            decisions.append(
-                f"* {bad_icon} Mismatch: No commit with source branch JIRA number"
-            )
+        if source_branch_jira is not None and source_branch_jira not in possible_commit_jiras:
+            decisions.append(f"* {bad_icon} Mismatch: No commit with source branch JIRA number")
         if pr_title_jira is not None and pr_title_jira not in possible_commit_jiras:
-            decisions.append(
-                f"* {bad_icon} Mismatch: No commit with PR title JIRA number"
-            )
+            decisions.append(f"* {bad_icon} Mismatch: No commit with PR title JIRA number")
 
     # Construct the new comment
     return "\n".join(decisions)
@@ -177,30 +165,22 @@ def main():
 
     # Check the PR commits
     try:
-        possible_commit_jiras = get_commit_jira_numbers(
-            pull_urls.get("commits", {}).get("href")
-        )
+        possible_commit_jiras = get_commit_jira_numbers(pull_urls.get("commits", {}).get("href"))
     except CommandException as ce:
         print(f"Failed to get commits: {ce}")
         exit(255)
 
     # Check the PR source branch
-    source_branch_jira = does_string_start_with_jira(
-        pull_request.get("head", {}).get("ref", "")
-    )
+    source_branch_jira = does_string_start_with_jira(pull_request.get("head", {}).get("ref", ""))
 
-    new_comment_body = make_decisions(
-        pr_title_jira, possible_commit_jiras, source_branch_jira
-    )
+    new_comment_body = make_decisions(pr_title_jira, possible_commit_jiras, source_branch_jira)
 
     print("Results:")
     print(new_comment_body)
 
     # Post the new comment
     print("Creating new comment ... ", end="")
-    response = requests.post(
-        comments_url, json={"body": new_comment_body}, headers=http_headers
-    )
+    response = requests.post(comments_url, json={"body": new_comment_body}, headers=http_headers)
     print(response.status_code)
     if response.status_code != 201:
         print("Failed to add new comment")

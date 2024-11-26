@@ -1,13 +1,11 @@
-#!/usr/bin/env python
+from os import environ
+from unittest import mock
 
 import pytest
-import unittest
-from unittest import mock
-from os import environ
 import requests_mock
+from requests.exceptions import MissingSchema
 
 import check_dvcs
-from requests.exceptions import MissingSchema
 
 
 class TestDoesStringStartWithJira:
@@ -17,16 +15,15 @@ class TestDoesStringStartWithJira:
         [
             ("testing", None),
             (f'{check_dvcs._NO_JIRA_MARKER} other stuff', check_dvcs._NO_JIRA_MARKER),
-            (f'AAP-1234 other stuff', 'AAP-1234'),
+            ('AAP-1234 other stuff', 'AAP-1234'),
         ],
     )
-
     def test_does_string_start_with_jira_function(self, input, expected_return):
         result = check_dvcs.does_string_start_with_jira(input)
         assert result == expected_return
 
 
-class TestGetPreviousCommentsUrls():
+class TestGetPreviousCommentsUrls:
 
     def test_invalid_url(self):
         with pytest.raises(MissingSchema):
@@ -49,7 +46,7 @@ class TestGetPreviousCommentsUrls():
                         "url": "https://example.com/1",
                     },
                 ],
-                []
+                [],
             ),
             (
                 [
@@ -58,7 +55,7 @@ class TestGetPreviousCommentsUrls():
                         "url": "https://example.com/1",
                     },
                 ],
-                ["https://example.com/1"]
+                ["https://example.com/1"],
             ),
         ],
     )
@@ -69,7 +66,38 @@ class TestGetPreviousCommentsUrls():
             assert response == expected_result
 
 
-class TestGitCommitJiraNumbers():
+class TestDeletePreviousComments:
+
+    def test_good_delete(self):
+        base_url = 'https://example.com/'
+        with requests_mock.Mocker() as m:
+            m.register_uri('DELETE', f'{base_url}1', status_code=404)
+            m.register_uri('DELETE', f'{base_url}2', status_code=204)
+            check_dvcs.delete_previous_comments([f'{base_url}1', f'{base_url}2'])
+
+    def test_bad_deletes(self):
+        base_url = 'https://example.com/'
+        with requests_mock.Mocker() as m:
+            m.register_uri('DELETE', f'{base_url}1', status_code=500)
+            m.register_uri('DELETE', f'{base_url}2', status_code=201)
+            m.register_uri('DELETE', f'{base_url}3', status_code=404)
+            m.register_uri('DELETE', f'{base_url}4', status_code=204)
+            with pytest.raises(check_dvcs.CommandException) as ce:
+                check_dvcs.delete_previous_comments(
+                    [
+                        f'{base_url}1',
+                        f'{base_url}2',
+                        f'{base_url}3',
+                        f'{base_url}4',
+                    ]
+                )
+            assert f'{base_url}1' in str(ce.value)
+            assert f'{base_url}2' in str(ce.value)
+            assert f'{base_url}3' not in str(ce.value)
+            assert f'{base_url}4' not in str(ce.value)
+
+
+class TestGitCommitJiraNumbers:
 
     def test_invalid_url(self):
         with pytest.raises(MissingSchema):
@@ -87,42 +115,30 @@ class TestGitCommitJiraNumbers():
             ([], []),
             (
                 [
-                    {
-                        "commit": {
-                            "message": "This is wrong"
-                        }
-                    },
+                    {"commit": {"message": "This is wrong"}},
                 ],
-                []
+                [],
             ),
             (
                 [
-                    {
-                        "commit": {
-                            "message": f"{check_dvcs._NO_JIRA_MARKER} This has the no jira marker"
-                        }
-                    },
+                    {"commit": {"message": f"{check_dvcs._NO_JIRA_MARKER} This has the no jira marker"}},
                 ],
-                [check_dvcs._NO_JIRA_MARKER]
+                [check_dvcs._NO_JIRA_MARKER],
             ),
             (
                 [
-                    {
-                        "commit": {
-                            "message": f"AAP-1234 This has the jira marker"
-                        }
-                    },
+                    {"commit": {"message": "AAP-1234 This has the jira marker"}},
                 ],
-                ['AAP-1234']
+                ['AAP-1234'],
             ),
-        ]
+        ],
     )
-
     def test_json_return(self, json, expected_result):
         with requests_mock.Mocker() as m:
             m.register_uri('GET', 'https://example.com', status_code=200, json=json)
             response = check_dvcs.get_commit_jira_numbers("https://example.com")
             assert response == expected_result
+
 
 class TestMain:
 
@@ -131,7 +147,7 @@ class TestMain:
         [
             "{'bad': 'json',}",
             "",
-        ]
+        ],
     )
     def test_invalid_pull_input(self, capsys, json):
         environ['PULL_REQUEST'] = json
@@ -146,7 +162,7 @@ class TestMain:
         [
             None,
             "",
-        ]
+        ],
     )
     def test_github_invalid_token(self, capsys, token):
         environ['PULL_REQUEST'] = "{}"
@@ -202,18 +218,45 @@ class TestMain:
                         check_dvcs.main()
                     assert e.value.code == 255
 
-class TestMakeDecisions():
+
+class TestMakeDecisions:
 
     @pytest.mark.parametrize(
-        "pr_title_jira,possible_commit_jiras,source_branch_jira,expected_return",
+        "pr_title_jira,possible_commit_jiras,source_branch_jira",
         [
-            (f'{check_dvcs._NO_JIRA_MARKER}', f'{check_dvcs._NO_JIRA_MARKER}',
+            (
                 f'{check_dvcs._NO_JIRA_MARKER}',
-                f'{check_dvcs.bad_icon} Title: PR title does not start with a JIRA number (AAP-[0-9]+) or {check_dvcs._NO_JIRA_MARKER}'),
-            # ("AAP-1234", "testing", "testing", "AAP-1234"),
-            # ("AAP-1234", "AAP-1234 AAP-5432", "AAP-1234", check_dvcs.good_icon),
-        ]
+                [f'{check_dvcs._NO_JIRA_MARKER}'],
+                f'{check_dvcs._NO_JIRA_MARKER}',
+            ),
+            (
+                'AAP-1234',
+                ['AAP-1234', f"{check_dvcs._NO_JIRA_MARKER} no marker", 'AAP-5678 Some other marker but only one has to be valid'],
+                'aap-1234',
+            ),
+        ],
     )
-    def test_make_decisions(self, pr_title_jira, possible_commit_jiras, source_branch_jira, expected_return):
-            result = check_dvcs.make_decisions( pr_title_jira, possible_commit_jiras, source_branch_jira)
-            assert result == expected_return
+    def test_good_result(self, pr_title_jira, possible_commit_jiras, source_branch_jira):
+        result = check_dvcs.make_decisions(pr_title_jira, possible_commit_jiras, source_branch_jira)
+        assert check_dvcs.bad_icon not in result
+
+    @pytest.mark.parametrize(
+        "pr_title_jira,possible_commit_jiras,source_branch_jira,expected_in_message",
+        [
+            (
+                None,
+                [f'{check_dvcs._NO_JIRA_MARKER}'],
+                f'{check_dvcs._NO_JIRA_MARKER}',
+                f"* {check_dvcs.bad_icon} Title: PR title does not start with a JIRA number",
+            ),
+            (
+                f"{check_dvcs._NO_JIRA_MARKER}",
+                [f'{check_dvcs._NO_JIRA_MARKER}'],
+                None,
+                f"* {check_dvcs.bad_icon} Source Branch: The source branch of the PR does not start with",
+            ),
+        ],
+    )
+    def test_bad_result(self, pr_title_jira, possible_commit_jiras, source_branch_jira, expected_in_message):
+        result = check_dvcs.make_decisions(pr_title_jira, possible_commit_jiras, source_branch_jira)
+        assert expected_in_message in result
