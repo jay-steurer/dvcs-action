@@ -6,11 +6,13 @@ This action validates the following in a PR:
 To use this action create a github workflow like:
 ```yaml
 on:
-  pull_request:
-    types: [opened, edited, reopened, synchronize]
-
+  pull_request_target:
+    type: opened, synchronize, reopened, edited
 jobs:
   dvcs_pr_checker:
+    permissions:
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-latest
     name: Check the PR for DVCS integration
     steps:
@@ -18,5 +20,4 @@ jobs:
         uses: ansible/dvcs-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-
 ```

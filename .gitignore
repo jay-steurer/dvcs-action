@@ -1,3 +1,9 @@
+# Coverage files
+coverage.json
+coverage.xml
+dvcs-action-test-results.xml
+htmlcov
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

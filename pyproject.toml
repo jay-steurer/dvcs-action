@@ -51,7 +51,7 @@ legacy_tox_ini = """
         -r{toxinidir}/requirements_test.txt
         -r{toxinidir}/requirements.txt
     commands =
-        pytest -n {env:PYTEST_NUM_PROCESSES:auto} --cov=. --cov-report=xml:coverage.xml --cov-report=html --cov-report=json --cov-branch --junit-xml=dvcs_action-test-results.xml .
+        pytest -n {env:PYTEST_NUM_PROCESSES:auto} --cov=. --cov-report=xml:coverage.xml --cov-report=html --cov-report=json --cov-branch --junit-xml=dvcs-action-test-results.xml .
 
     [testenv:flake8]
     deps =
