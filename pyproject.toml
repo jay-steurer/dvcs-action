@@ -1,0 +1,75 @@
+[project]
+name = "dvcs-action"
+authors = [{ name = "Red Hat, Inc.", email = "info@ansible.com" }]
+description = "Red Hat DVCS GitHub Action"
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = ["dvcs", "jira", "red hat"]
+license = { text = "Apache-2.0" }
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+
+[tool.black]
+line-length = 160
+fast = true
+skip-string-normalization = true
+
+[tool.isort]
+profile = "black"
+line_length = 160
+extend_skip = []
+
+[tool.flake8]
+max-line-length = 160
+extend-ignore = ["E203"]
+exclude = ['.tox']
+
+[tool.tox]
+legacy_tox_ini = """
+    [tox]
+    min_version = 4.0
+    no_package = true
+    env_list =
+        check
+        py311
+    labels =
+        test = py311
+        check = check
+        lint = flake8, black, isort
+
+    [testenv]
+    deps =
+        -r{toxinidir}/requirements_test.txt
+        -r{toxinidir}/requirements.txt
+    commands =
+        pytest -n {env:PYTEST_NUM_PROCESSES:auto} --cov=. --cov-report=xml:coverage.xml --cov-report=html --cov-report=json --cov-branch --junit-xml=dvcs_action-test-results.xml .
+
+    [testenv:flake8]
+    deps =
+        flake8
+        Flake8-pyproject
+    commands = flake8 {posargs:.} --extend-exclude .venv
+
+    [testenv:black]
+    deps =
+        black
+    commands = black {posargs:.}
+
+    [testenv:isort]
+    deps =
+        isort
+    commands = isort {posargs:.}
+"""
+
+[tool.coverage.run]
+omit = ["test_check_dvcs.py"]
+relative_files = true
