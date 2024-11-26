@@ -8,52 +8,45 @@ from typing import Optional
 
 import requests
 
-# Get and validate the data from the environment (the GitHub action should pass this in)
-try:
-    pull_request = json.loads(getenv("PULL_REQUEST"))
-except json.JSONDecodeError as jde:
-    print(f"Failed to load json from string: {jde}")
-    exit(255)
-except TypeError:
-    print("The PR string came back as None")
-    exit(255)
-
-GITHUB_TOKEN = getenv("GH_TOKEN")
-if not GITHUB_TOKEN:
-    print("Did not get a github token, failing!")
-    exit(255)
-
 _NO_JIRA_MARKER = "NO_JIRA"
 _AAP_RE = "aap-[0-9]+"
-commit_url = pull_request.get("_links", {}).get("commits", {}).get("href")
-pull_urls = pull_request.get("_links", {})
-comments_url = pull_request.get("_links", {}).get("comments", {}).get("href")
 comment_preamble = "DVCS PR Check Results:"
 good_icon = "✅"
 bad_icon = "❌"
-http_headers = {
-    "Accept": "application/vnd.github+json",
-    "Authorization": f"Bearer {GITHUB_TOKEN}",
-    "X-GitHub-Api-Version": "2022-11-28",
-}
+http_headers = {}
 
 
-def delete_previous_comment_if_needed(comments_url) -> None:
+class CommandException(Exception):
+    pass
+
+
+def get_previous_comments_urls(comments_url) -> list[str]:
     # Load the existing comments
     print("Getting comments ... ", end="")
     comments = requests.get(comments_url)
     print(comments.status_code)
     if comments.status_code != 200:
-        print("Failed to get existing comments!")
-        exit(255)
+        raise CommandException("Failed to get existing comments!")
+
+    response = []
     for comment in comments.json():
         if comment["body"].startswith(comment_preamble):
-            print("Deleting old comment ... ", end="")
-            response = requests.delete(comment["url"], headers=http_headers)
-            print(response.status_code)
-            if response.status_code not in [204, 404]:
-                print("Failed to delete previous comment")
-                exit(255)
+            response.append(comment["url"])
+
+    return response
+
+
+def delete_previous_comments(comments_urls: list[str]) -> None:
+    comments_that_failed_to_delete = []
+    for url in comments_urls:
+        print("Deleting old comment ... ", end="")
+        response = requests.delete(url, headers=http_headers)
+        print(response.status_code)
+        if response.status_code not in [204, 404]:
+            comments_that_failed_to_delete.append(url)
+    
+    if len(comments_that_failed_to_delete) > 0:
+        raise CommandException('\n'.join(comments_that_failed_to_delete))
 
 
 def does_string_start_with_jira(string_to_match: str) -> Optional[str]:
@@ -69,16 +62,15 @@ def get_commit_jira_numbers(commit_url: str) -> list[str]:
     print("Getting commits ... ", end="")
     commits = requests.get(commit_url)
     print(commits.status_code)
-    comment_re = re.compile(f"{_AAP_RE}|{_NO_JIRA_MARKER}")
     if commits.status_code != 200:
-        print("Failed to get commits!")
-        exit(255)
+        raise CommandException("Failed to get commits!")
+    comment_re = re.compile(f"({_AAP_RE}|{_NO_JIRA_MARKER})")
     possible_jiras = []
     for commit in commits.json():
         # TODO: How to check if this is a merge commit or a regular comment?
         matches = comment_re.match(commit["commit"]["message"])
         if matches:
-            possible_jiras.append(matches.groups[0])
+            possible_jiras.append(matches.groups()[0])
 
     return possible_jiras
 
@@ -151,37 +143,75 @@ def make_decisions(
     return "\n".join(decisions)
 
 
-delete_previous_comment_if_needed(comments_url)
+def main():
+    # Get and validate the data from the environment (the GitHub action should pass this in)
+    try:
+        pull_request = json.loads(getenv("PULL_REQUEST"))
+    except json.JSONDecodeError as jde:
+        print(f"Failed to load json from string: {jde}")
+        exit(255)
+    except TypeError:
+        print("The PR string came back as None")
+        exit(255)
 
-# Check the PR title
-pr_title_jira = does_string_start_with_jira(pull_request.get("title"))
+    GITHUB_TOKEN = getenv("GH_TOKEN")
+    if not GITHUB_TOKEN:
+        print("Did not get a github token, failing!")
+        exit(255)
 
-# Check the PR commits
-possible_commit_jiras = get_commit_jira_numbers(
-    pull_urls.get("commits", {}).get("href")
-)
+    pull_urls = pull_request.get("_links", {})
+    comments_url = pull_request.get("_links", {}).get("comments", {}).get("href")
 
-# Check the PR source branch
-source_branch_jira = does_string_start_with_jira(
-    pull_request.get("head", {}).get("ref", "")
-)
+    http_headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
 
-new_comment_body = make_decisions(
-    pr_title_jira, possible_commit_jiras, source_branch_jira
-)
+    try:
+        delete_previous_comments(get_previous_comments_urls(comments_url))
+    except CommandException as ce:
+        print("Failed to delete one or more comments:")
+        print(ce)
+        exit(255)
 
-print("Results:")
-print(new_comment_body)
+    # Check the PR title
+    pr_title_jira = does_string_start_with_jira(pull_request.get("title"))
 
-# Post the new comment
-print("Creating new comment ... ", end="")
-response = requests.post(
-    comments_url, json={"body": new_comment_body}, headers=http_headers
-)
-print(response.status_code)
-if response.status_code != 201:
-    print("Failed to add new comment")
+    # Check the PR commits
+    try:
+        possible_commit_jiras = get_commit_jira_numbers(
+            pull_urls.get("commits", {}).get("href")
+        )
+    except CommandException as ce:
+        print(f"Failed to get commits: {ce}")
+        exit(255)
 
-# If we had any errors, print them and exit
-if bad_icon in new_comment_body:
-    exit(255)
+    # Check the PR source branch
+    source_branch_jira = does_string_start_with_jira(
+        pull_request.get("head", {}).get("ref", "")
+    )
+
+    new_comment_body = make_decisions(
+        pr_title_jira, possible_commit_jiras, source_branch_jira
+    )
+
+    print("Results:")
+    print(new_comment_body)
+
+    # Post the new comment
+    print("Creating new comment ... ", end="")
+    response = requests.post(
+        comments_url, json={"body": new_comment_body}, headers=http_headers
+    )
+    print(response.status_code)
+    if response.status_code != 201:
+        print("Failed to add new comment")
+
+    # If we had any errors, print them and exit
+    if bad_icon in new_comment_body:
+        exit(255)
+
+
+if __name__ == '__main__':
+    main()
