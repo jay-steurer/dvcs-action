@@ -6,3 +6,4 @@ isort
 Flake8-pyproject
 pytest-xdist
 pytest-cov
+tox
