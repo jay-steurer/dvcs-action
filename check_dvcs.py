@@ -64,7 +64,7 @@ def get_commit_jira_numbers(commit_url: str) -> list[str]:
     print(commits.status_code)
     if commits.status_code != 200:
         raise CommandException("Failed to get commits!")
-    comment_re = re.compile(f"({_AAP_RE}|{_NO_JIRA_MARKER})")
+    comment_re = re.compile(f"({_AAP_RE}|{_NO_JIRA_MARKER})", re.IGNORECASE)
     possible_jiras = []
     for commit in commits.json():
         # TODO: How to check if this is a merge commit or a regular comment?
