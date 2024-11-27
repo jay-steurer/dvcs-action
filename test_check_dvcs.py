@@ -230,6 +230,7 @@ class TestMakeDecisions:
 ## test scenarios (happy path)
 ## PR has NO_JIRA_MARKER, Commit has NO_JIRA_MARKER, SB has NO_JIRA_MARKER,
 ## PR has a valid JIRA marker, commit has a valid Jira marker, SB has a valid JIRA marker
+## Commit has _NO_JIRA_MARKER
 ### Validate upper case/lower case JIRA markers
 
     @pytest.mark.parametrize(
@@ -270,59 +271,77 @@ class TestMakeDecisions:
 ## PR title is none
 ## PR title does not match expected format
 ## Commit is empty
-## Commit has no JIRA marker
 ## Commit JIRA markers don't match PR and SB JIRA markers
+## Commit has no JIRA
 ## Source branch is none
-## Source branch does not match jira
+## Source branch does not match JIRA PR
 ## Source branch does not match expected format
 ### Validate AAP-1234 marker format
 
     @pytest.mark.parametrize(
         "pr_title_jira,possible_commit_jiras,source_branch_jira,expected_in_message",
         [
-            (
+            (## PR title is none
                 None,
                 [f'{check_dvcs._NO_JIRA_MARKER}'],
                 f'{check_dvcs._NO_JIRA_MARKER}',
                 f"* {check_dvcs.bad_icon} Title: PR title does not start with a JIRA number",
             ),
-            (
+            (## PR title does not match expected format
                 'Title title', ## it fails on mismatch instead of the PR title, is it the correct behavior?
                 [f'{check_dvcs._NO_JIRA_MARKER}', 'Title title'],
                 f'{check_dvcs._NO_JIRA_MARKER}',
-                f"* {check_dvcs.bad_icon} Mismatch: The JIRAs in the source branch no_jira and title title title do not match!",
+                f"* {check_dvcs.bad_icon} Mismatch: The JIRAs in the source branch ",
             ),
-            (
+            (## Commit is empty
+                'AAP-1234',
+                [None, None],
+                f'{check_dvcs._NO_JIRA_MARKER}',
+                f"* {check_dvcs.bad_icon} Mismatch: No commit with PR title JIRA number",
+            ),
+            (## Commit JIRA markers don't match PR and SB JIRA markers
+                'AAP-1234',
+                ['AAP-1235', 'AAP-1235'],
+                f'{check_dvcs._NO_JIRA_MARKER}',
+                f"* {check_dvcs.bad_icon} Mismatch: No commit with source branch JIRA number",
+            ),
+            (## Commit has no JIRA
                 f"{check_dvcs._NO_JIRA_MARKER}", ## it does not show an error message for no jira commit
                 ['This is a commit', 'this is another commit', 'this is another commit'],
                 f'{check_dvcs._NO_JIRA_MARKER}',
                 f"* {check_dvcs.bad_icon} / not the result ?",
             ),
-            (
-                f"{check_dvcs._NO_JIRA_MARKER}", #results don't show a mismatch
-                ['AAP-1234', 'this is another commit aap-1234'],
-                f'{check_dvcs._NO_JIRA_MARKER}',
-                f"* {check_dvcs.bad_icon} Mismatch: The JIRAs in the source branch",
-            ),
-            (
+            (## Source branch is none
                 f"{check_dvcs._NO_JIRA_MARKER}",
                 [f'{check_dvcs._NO_JIRA_MARKER}'],
                 None,
+                f"* {check_dvcs.bad_icon} Source Branch: The source branch of the PR does not start with a JIRA number"
+            ),
+            (## Source branch does not match jira PR
+                f"{check_dvcs._NO_JIRA_MARKER}", #results don't show a mismatch
+                ['AAP-1234', 'this is another commit aap-1234'],
+                'AAP-1234',
+                f"* {check_dvcs.bad_icon} Mismatch: The JIRAs in the source branch",
+            ),
+            (## Source branch does not match expected format
+                f"{check_dvcs._NO_JIRA_MARKER}",
+                [f'{check_dvcs._NO_JIRA_MARKER}'],
+                'ABCDE-1234', # source accepts different types of JIRA formats.
                 f"* {check_dvcs.bad_icon} Source Branch: The source branch of the PR does not start with",
             ),
-            (
+            (## Validate AAP-1234 marker format
                 'AAP-1234 this is a title',
                 ['AAP-1234', 'aap-1234', 'aap-1234 this is a commit with jira numbers'],
                 'aap-1234 this is the source branch',
                 f"* {check_dvcs.bad_icon} Mismatch: The JIRAs in the source branch",
             ),
-            (
+            (## Validate AAP-1234 marker format
                 'AAP-1234 this is a title',
                 ['AAP-1234', 'aap-1234', 'aap-1234 this is a commit with jira numbers'],
                 'aap-1234 this is the source branch',
                 f"* {check_dvcs.bad_icon} Mismatch: The JIRAs in the source branch",
             ),
-                        (
+            (## Validate AAP-1234 marker format
                 'ABC-0900 this is a title',
                 ['ABC-0900', 'ABC-0900', 'ABC-0900 this is a commit with jira numbers'],
                 'ABC-0900 this is the source branch',
@@ -333,4 +352,4 @@ class TestMakeDecisions:
     def test_bad_result(self, pr_title_jira, possible_commit_jiras, source_branch_jira, expected_in_message):
         result = check_dvcs.make_decisions(pr_title_jira, possible_commit_jiras, source_branch_jira)
         assert expected_in_message in result
-        #print("Result from make_decisions:", result)
+        # print("Result from make_decisions:", result)
