@@ -131,6 +131,12 @@ class TestGitCommitJiraNumbers:
                 ],
                 ['AAP-1234'],
             ),
+            (
+                [
+                    {"commit": {"message": "ABC-0909 This has wrong jira marker format"}},
+                ],
+                [],
+            ),
         ],
     )
     def test_json_return(self, json, expected_result):
@@ -226,8 +232,6 @@ class TestMakeDecisions:
 ## PR has a valid JIRA marker, commit has a valid Jira marker, SB has a valid JIRA marker
 ### Validate upper case/lower case JIRA markers
 
-
-
     @pytest.mark.parametrize(
         "pr_title_jira,possible_commit_jiras,source_branch_jira",
         [
@@ -290,7 +294,7 @@ class TestMakeDecisions:
             ),
             (
                 f"{check_dvcs._NO_JIRA_MARKER}", ## it does not show an error message for no jira commit
-                ['This is a commit', 'this is another commit'],
+                ['This is a commit', 'this is another commit', 'this is another commit'],
                 f'{check_dvcs._NO_JIRA_MARKER}',
                 f"* {check_dvcs.bad_icon} / not the result ?",
             ),
@@ -328,5 +332,5 @@ class TestMakeDecisions:
     )
     def test_bad_result(self, pr_title_jira, possible_commit_jiras, source_branch_jira, expected_in_message):
         result = check_dvcs.make_decisions(pr_title_jira, possible_commit_jiras, source_branch_jira)
-        # assert expected_in_message in result
-        print("Result from make_decisions:", result)
+        assert expected_in_message in result
+        #print("Result from make_decisions:", result)
