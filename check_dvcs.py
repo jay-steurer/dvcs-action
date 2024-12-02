@@ -14,7 +14,10 @@ _AAP_RE = "aap-[0-9]+"
 comment_preamble = "DVCS PR Check Results:"
 good_icon = "✅"
 bad_icon = "❌"
-http_headers = {}
+http_headers = {
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+}
 
 
 class CommandException(Exception):
@@ -42,6 +45,9 @@ def get_previous_comments_urls(comments_url) -> list[str]:
 
 
 def delete_previous_comments(comments_urls: list[str]) -> None:
+    if 'Authorization' not in http_headers:
+        raise CommandException("Auth header missing, can't delete old comments!")
+
     comments_that_failed_to_delete = []
     for url in comments_urls:
         print("Deleting old comment ... ", end="")
@@ -153,6 +159,8 @@ def make_decisions(
 
 
 def main(args=[]):
+    global http_headers
+
     dry_run = False
 
     parser = argparse.ArgumentParser(
@@ -174,11 +182,6 @@ def main(args=[]):
         print(f"Failed to load json from string: {jde}")
         exit(255)
 
-    http_headers = {
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-
     print(f"Running DVCS v3 in dry-run={dry_run}")
 
     if not dry_run:
@@ -186,6 +189,7 @@ def main(args=[]):
         if not GITHUB_TOKEN:
             print("Did not get a github token, failing!")
             exit(255)
+        print("Added authentication to headers")
         http_headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
 
     pull_urls = pull_request.get("_links", {})
