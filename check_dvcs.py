@@ -179,7 +179,7 @@ def main(args=[]):
         "X-GitHub-Api-Version": "2022-11-28",
     }
 
-    print("Running DVCS v2")
+    print("Running DVCS v3")
 
     if not dry_run:
         GITHUB_TOKEN = getenv("GH_TOKEN")

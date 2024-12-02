@@ -15,7 +15,7 @@ jobs:
     name: Check the PR for DVCS integration
     steps:
       - id: foo
-        uses: ansible/dvcs-action@v2
+        uses: ansible/dvcs-action@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
