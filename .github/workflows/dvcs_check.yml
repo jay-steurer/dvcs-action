@@ -1,6 +1,10 @@
 on:
   pull_request_target:
-    type: opened, synchronize, reopened, edited
+    type:
+      - opened
+      - synchronize
+      - reopened
+      - edited
 jobs:
   dvcs_pr_checker:
     permissions:
