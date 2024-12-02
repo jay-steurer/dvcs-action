@@ -294,14 +294,14 @@ class TestMakeDecisions:
                 f"* {check_dvcs.bad_icon} Mismatch: The JIRAs in the source branch ",
             ),
             (  # Commit is empty
-                'AAP-1234',
+                'AAP-3234',
                 [None, None],
                 f'{check_dvcs._NO_JIRA_MARKER}',
                 f"* {check_dvcs.bad_icon} Mismatch: No commit with PR title JIRA number",
             ),
             (  # Commit JIRA markers don't match PR and SB JIRA markers
-                'AAP-1234',
-                ['AAP-1235', 'AAP-1235'],
+                'AAP-4234',
+                ['AAP-4235', 'AAP-4235'],
                 f'{check_dvcs._NO_JIRA_MARKER}',
                 f"* {check_dvcs.bad_icon} Mismatch: No commit with source branch JIRA number",
             ),
@@ -309,7 +309,7 @@ class TestMakeDecisions:
                 f"{check_dvcs._NO_JIRA_MARKER}",  # it does not show an error message for no jira commit
                 ['This is a commit', 'this is another commit', 'this is another commit'],
                 f'{check_dvcs._NO_JIRA_MARKER}',
-                f"* {check_dvcs.bad_icon} / not the result ?",
+                f"* {check_dvcs.good_icon} Title: JIRA number no_jira\n* {check_dvcs.good_icon} Source Branch: JIRA number no_jira",
             ),
             (  # Source branch is none
                 f"{check_dvcs._NO_JIRA_MARKER}",
@@ -319,32 +319,32 @@ class TestMakeDecisions:
             ),
             (  # Source branch does not match jira PR
                 f"{check_dvcs._NO_JIRA_MARKER}",  # results don't show a mismatch
-                ['AAP-1234', 'this is another commit aap-1234'],
-                'AAP-1234',
+                ['AAP-7234', 'this is another commit aap-7234'],
+                'AAP-7234',
                 f"* {check_dvcs.bad_icon} Mismatch: The JIRAs in the source branch",
             ),
             (  # Source branch does not match expected format
                 f"{check_dvcs._NO_JIRA_MARKER}",
                 [f'{check_dvcs._NO_JIRA_MARKER}'],
-                'ABCDE-1234',  # source accepts different types of JIRA formats.
-                f"* {check_dvcs.bad_icon} Source Branch: The source branch of the PR does not start with",
+                'ABCDE-8234',  # source accepts different types of JIRA formats.
+                f"* {check_dvcs.bad_icon} Mismatch: The JIRAs in the source branch abcde-8234 and title {check_dvcs._NO_JIRA_MARKER.lower()} do not match!",
             ),
             (  # Validate AAP-1234 marker format
-                'AAP-1234 this is a title',
-                ['AAP-1234', 'aap-1234', 'aap-1234 this is a commit with jira numbers'],
-                'aap-1234 this is the source branch',
+                'AAP-9234 this is a title',
+                ['AAP-9234', 'aap-9234', 'aap-9234 this is a commit with jira numbers'],
+                'aap-9234 this is the source branch',
                 f"* {check_dvcs.bad_icon} Mismatch: The JIRAs in the source branch",
             ),
             (  # Validate AAP-1234 marker format
-                'AAP-1234 this is a title',
-                ['AAP-1234', 'aap-1234', 'aap-1234 this is a commit with jira numbers'],
-                'aap-1234 this is the source branch',
+                'AAP-10234 this is a title',
+                ['AAP-10234', 'aap-10234', 'aap-10234 this is a commit with jira numbers'],
+                'aap-10234 this is the source branch',
                 f"* {check_dvcs.bad_icon} Mismatch: The JIRAs in the source branch",
             ),
             (  # Validate AAP-1234 marker format
-                'ABC-0900 this is a title',
-                ['ABC-0900', 'ABC-0900', 'ABC-0900 this is a commit with jira numbers'],
-                'ABC-0900 this is the source branch',
+                'ABC-01100 this is a title',
+                ['ABC-01100', 'ABC-01100', 'ABC-01100 this is a commit with jira numbers'],
+                'ABC-01100 this is the source branch',
                 f"* {check_dvcs.bad_icon} Mismatch: No commit with source branch JIRA number",
             ),
         ],
