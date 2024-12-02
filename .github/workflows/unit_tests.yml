@@ -25,7 +25,6 @@ jobs:
         run: tox -e 311
 
       - name: Inject PR number into coverage.xml
-        if: matrix.tests.sonar
         run: sed -i '2i <!-- PR ${{ github.event.number }} -->' coverage.xml
 
       - name: Upload coverage as artifact
@@ -33,13 +32,6 @@ jobs:
         with:
           name: coverage
           path: coverage.xml
-
-      - name: SonarCloud Scan (on push)
-        uses: SonarSource/sonarcloud-github-action@master
-        if: github.event_name == 'push' && github.repository == 'ansible/dvcs-action'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Upload jUnit XML test results
         if: github.event_name == 'push' && github.repository == 'ansible/dvcs-action' && github.ref_name == 'devel'
