@@ -64,15 +64,27 @@ def get_commit_jira_numbers(commit_url: str) -> list[str]:
     print(commits.status_code)
     if commits.status_code != 200:
         raise CommandException("Failed to get commits!")
-    comment_re = re.compile(f"({_AAP_RE}|{_NO_JIRA_MARKER})", re.IGNORECASE)
+    comment_re = re.compile(rf"({_AAP_RE}|{_NO_JIRA_MARKER})", re.IGNORECASE)
     possible_jiras = []
     for commit in commits.json():
-        # TODO: How to check if this is a merge commit or a regular comment?
-        matches = comment_re.match(commit["commit"]["message"])
-        if matches:
-            possible_jiras.append(matches.groups()[0])
+            # Print the commit message for debugging
+            commit_message = commit["commit"]["message"]
+            print("commit message:", commit_message)
+
+            matches = comment_re.findall(commit_message)
+            if matches:
+                possible_jiras.extend(matches)  # Use extend to add multiple matches
 
     return possible_jiras
+    # comment_re = re.compile(f"({_AAP_RE}|{_NO_JIRA_MARKER})", re.IGNORECASE)
+    # possible_jiras = []
+    # for commit in commits.json():
+    #     # TODO: How to check if this is a merge commit or a regular comment?
+    #     matches = comment_re.match(commit["commit"]["message"])
+    #     if matches:
+    #         possible_jiras.append(matches.groups()[0])
+
+    # return possible_jiras
 
 
 def make_decisions(
