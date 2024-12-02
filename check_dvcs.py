@@ -15,7 +15,6 @@ comment_preamble = "DVCS PR Check Results:"
 good_icon = "✅"
 bad_icon = "❌"
 http_headers = {}
-dry_run = False
 
 
 class CommandException(Exception):
@@ -32,11 +31,12 @@ def get_previous_comments_urls(comments_url) -> list[str]:
 
     response = []
     for comment in comments.json():
-        if dry_run:
-            print(f"Checking if {comment['body']} starts with {comment_preamble}")
+        print(f"Checking if {comment['body']} starts with {comment_preamble} ... ", end="")
         if comment["body"].startswith(comment_preamble):
             response.append(comment["url"])
-            print("GOOD!")
+            print("Good!")
+        else:
+            print("Failed")
 
     return response
 
@@ -57,13 +57,12 @@ def delete_previous_comments(comments_urls: list[str]) -> None:
 def does_string_start_with_jira(string_to_match: str) -> Optional[str]:
     pr_title_re = re.compile(f"^({_AAP_RE}|{_NO_JIRA_MARKER})", re.IGNORECASE)
     matches = pr_title_re.match(string_to_match)
-    if dry_run:
-        print(f"Checking if {string_to_match} starts with our RE")
+    print(f"Checking if {string_to_match} starts with our RE ... ", end="")
     if not matches:
-        print(f"String {string_to_match} failed check")
+        print("Failed!")
         return None
-    if dry_run:
-        print("Matched!")
+    else:
+        print("Good!")
     return matches.groups()[0]
 
 
@@ -78,22 +77,14 @@ def get_commit_jira_numbers(commit_url: str) -> list[str]:
     for commit in commits.json():
         # TODO: How to check if this is a merge commit or a regular comment?
         matches = comment_re.match(commit["commit"]["message"])
+        print(f"Checking if {commit['commit']['message']} has a JIRA number in it ... ", end="")
         if matches:
-            if dry_run:
-                print(f"{commit['commit']['message']} had a JIRA number in it {matches.groups()[0]}")
+            print(f"Good: {matches.groups()[0]}")
             possible_jiras.append(matches.groups()[0])
+        else:
+            print("None detected")
 
     return possible_jiras
-
-    # comment_re = re.compile(f"({_AAP_RE}|{_NO_JIRA_MARKER})", re.IGNORECASE)
-    # possible_jiras = []
-    # for commit in commits.json():
-    #     # TODO: How to check if this is a merge commit or a regular comment?
-    #     matches = comment_re.match(commit["commit"]["message"])
-    #     if matches:
-    #         possible_jiras.append(matches.groups()[0])
-
-    # return possible_jiras
 
 
 def make_decisions(
@@ -110,13 +101,12 @@ def make_decisions(
         if possible_commit_jiras[index] is not None:
             possible_commit_jiras[index] = possible_commit_jiras[index].lower()
 
-    if dry_run:
-        print("")
-        print("Making decisions based on the following:")
-        print(f"JIRA from title: {pr_title_jira}")
-        print(f"JIRA from source branch: {source_branch_jira}")
-        print(f"JIRAS from commits: {', '.join(possible_commit_jiras)}")
-        print("")
+    print("")
+    print("Making decisions based on the following:")
+    print(f"JIRA from title: {pr_title_jira}")
+    print(f"JIRA from source branch: {source_branch_jira}")
+    print(f"JIRAS from commits: {', '.join(possible_commit_jiras)}")
+    print("")
 
     decisions = [comment_preamble]
     # Now make th decisions if this is in good order....
@@ -163,7 +153,7 @@ def make_decisions(
 
 
 def main(args=[]):
-    global dry_run
+    dry_run = False
 
     parser = argparse.ArgumentParser(
         description="A tool for checking if a PR matches the DVCS rules.\n\n"
