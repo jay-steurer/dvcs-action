@@ -15,12 +15,12 @@ runs:
           requirements.txt
     
     - name: Install requirements.txt
-      run: pip install -r /home/runner/work/_actions/ansible/dvcs-action/v1/requirements.txt
+      run: pip install -r /home/runner/work/_actions/ansible/dvcs-action/v2/requirements.txt
       shell: bash
 
     - name: Validate PR for DVCS
       env:
         PULL_REQUEST: ${{ toJSON(github.event.pull_request) }}
         GH_TOKEN: ${{ inputs.github_token }}
-      run: /home/runner/work/_actions/ansible/dvcs-action/v1/check_dvcs.py
+      run: /home/runner/work/_actions/ansible/dvcs-action/v2/check_dvcs.py
       shell: bash
