@@ -1,6 +1,6 @@
 on:
   pull_request_target:
-    type:
+    types:
       - opened
       - synchronize
       - reopened
