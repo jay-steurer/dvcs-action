@@ -12,7 +12,7 @@ jobs:
   sonar:
     name: Run SonarCloud Analysis
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request'
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request' }}
     steps:
       - uses: actions/checkout@v3
 
