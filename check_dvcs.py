@@ -116,13 +116,21 @@ def make_decisions(
 
     decisions = [comment_preamble]
     # Now make th decisions if this is in good order....
+
+    # First check the PR title
     if not pr_title_jira:
         # If there is no PR title JIRA report bad
         decisions.append(f"* {bad_icon} Title: PR title does not start with a JIRA number (AAP-[0-9]+) or {_NO_JIRA_MARKER}")
+    elif pr_title_jira == _NO_JIRA_MARKER.lower():
+        # If we put the _NO_JIRA_MARKER in the title that is good enough.
+        # it provides the lowest entry barrier for community as they wouldn't have to fix branches or commit messages
+        decisions.append(f"* {good_icon} Title: reported no jira related, no other checks necessary")
+        return "\n".join(decisions)
     else:
         # Report the title is good
         decisions.append(f"* {good_icon} Title: JIRA number {pr_title_jira}")
 
+    # Next check the source branch
     if not source_branch_jira:
         # If there is no Source Branch JIRA report bad
         decisions.append(f"* {bad_icon} Source Branch: The source branch of the PR does not start with a JIRA number (AAP-[0-9]+) or {_NO_JIRA_MARKER}")
@@ -130,10 +138,12 @@ def make_decisions(
         # Report the source branch is good
         decisions.append(f"* {good_icon} Source Branch: JIRA number {source_branch_jira}")
 
+    # Now compare the source branch to the pr title
     if pr_title_jira is not None and source_branch_jira is not None and pr_title_jira != source_branch_jira:
         # If we have source and title JIRAS and there is a mismatch between the title and source branch JIRAs report the mismatch
         decisions.append(f"* {bad_icon} Mismatch: The JIRAs in the source branch {source_branch_jira} and title {pr_title_jira} do not match!")
 
+    # Finally lets check the commits
     if len(possible_commit_jiras) == 0:
         # If we got no commit JIRAS the commits are bad
         decisions.append(f"* {bad_icon} Commits: No commits with a JIRA number (AAP-[0-9]+) or {_NO_JIRA_MARKER} found!")
